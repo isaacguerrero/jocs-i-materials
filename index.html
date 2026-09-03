@@ -179,12 +179,12 @@
   }
   .gate-card input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .gate-error{ color:var(--danger); font-size:13px; min-height:18px; margin-bottom:6px; }
-  .pick-list{ display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; margin-bottom:6px; }
-  .pick-btn{
-    padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
-    color:var(--ink); font-size:15px; font-weight:600; cursor:pointer; text-align:left;
+  .pick-list{ margin-bottom:6px; }
+  .pick-list select{
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); font-size:16px; text-align:center;
   }
-  .pick-btn:hover{ border-color:var(--accent); }
+  .pick-list select:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
 
   /* Scanner */
   .scan-modal .modal{ max-width:400px; }
@@ -265,7 +265,7 @@ const firebaseConfig = {
 
 // Clave que el profesorado escribe una vez para entrar. Cámbiala
 // por la que quieras (letras y números, sin espacios al inicio/final).
-const ACCESS_KEY = "ludoteca2026";
+const ACCESS_KEY = "jocs1234";
 
 /* ============================================================
    2) A partir de aquí no hace falta tocar nada
@@ -399,11 +399,14 @@ function renderPickList(){
     list.innerHTML = '<p class="hint">Todavía no hay nadie en la lista — sé el primero, escribe tu nombre abajo.</p>';
     return;
   }
-  list.innerHTML = teachers.map(function(t){
-    return '<button class="pick-btn" data-name="'+esc(t)+'" type="button">'+esc(t)+'</button>';
-  }).join("");
-  Array.prototype.forEach.call(list.querySelectorAll("[data-name]"), function(btn){
-    btn.addEventListener("click", function(){ selectTeacher(btn.getAttribute("data-name")); });
+  list.innerHTML =
+    '<select id="pick-select">' +
+      teachers.map(function(t){ return '<option value="'+esc(t)+'">'+esc(t)+'</option>'; }).join("") +
+    '</select>' +
+    '<button class="btn btn-primary btn-block" id="pick-continue" type="button" style="margin-top:10px;">Continuar</button>';
+  document.getElementById("pick-continue").addEventListener("click", function(){
+    var sel = document.getElementById("pick-select");
+    if(sel.value) selectTeacher(sel.value);
   });
 }
 function renderWhoami(){
