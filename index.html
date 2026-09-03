@@ -132,6 +132,10 @@
 
   .card-foot{ display:flex; gap:8px; margin-top:auto; padding-top:2px; }
   .card-foot .btn{ flex:1; justify-content:center; }
+  .card-note{
+    flex:1; margin:0; padding:9px 4px; text-align:center; font-size:12.5px;
+    color:var(--ink-faint); font-style:italic;
+  }
 
   .loan-form{ display:flex; flex-direction:column; gap:8px; background:var(--surface-alt); border-radius:10px; padding:10px; }
   .loan-form .row{ display:flex; gap:8px; }
@@ -487,7 +491,9 @@ function cardHtml(g){
   if(loaningId === g.id){
     footer = loanFormHtml(g, 'data-id="'+esc(g.id)+'"');
   } else if(isLoaned){
-    footer = '<div class="card-foot"><button class="btn btn-sm" data-action="return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button></div>';
+    footer = (g.prestadoA === currentTeacher())
+      ? '<div class="card-foot"><button class="btn btn-sm" data-action="return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button></div>'
+      : '<div class="card-foot"><span class="card-note">Solo '+esc(g.prestadoA||"quien lo tiene")+' puede marcarlo como devuelto.</span></div>';
   } else {
     footer = '<div class="card-foot"><button class="btn btn-primary btn-sm" data-action="start-loan" data-id="'+esc(g.id)+'" type="button">Prestar</button></div>';
   }
@@ -733,7 +739,9 @@ function renderScan(lastCode, notFound){
         '<h3>'+esc(g.nombre)+'</h3>' +
         (isLoaned
           ? '<p class="hint">Prestado a '+esc(g.prestadoA||"—")+' desde '+esc(fmtDate(g.fechaPrestamo))+'</p>' +
-            '<button class="btn btn-primary btn-block" data-action="scan-return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button>'
+            (g.prestadoA === currentTeacher()
+              ? '<button class="btn btn-primary btn-block" data-action="scan-return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button>'
+              : '<p class="card-note">Solo '+esc(g.prestadoA||"quien lo tiene")+' puede marcarlo como devuelto.</p>')
           : '<button class="btn btn-primary btn-block" data-action="scan-loan" data-id="'+esc(g.id)+'" type="button">Prestarme "'+esc(g.nombre)+'"</button>'
         ) +
       '</div>';
