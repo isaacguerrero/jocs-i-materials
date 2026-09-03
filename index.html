@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ludoteca del Cole</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root{
+    --bg:#EEF0E6;
+    --surface:#FFFFFF;
+    --surface-alt:#E3E7D8;
+    --ink:#202B21;
+    --ink-soft:#5B6355;
+    --ink-faint:#8A9282;
+    --line:#D6DBC7;
+    --accent:#C97A2B;
+    --accent-strong:#A8611E;
+    --accent-ink:#FFF8EC;
+    --status-available-bg:#E1EEDA;
+    --status-available-fg:#2C6B39;
+    --status-loaned-bg:#F1E3EA;
+    --status-loaned-fg:#743A57;
+    --danger:#A6432E;
+    --shadow: 0 1px 2px rgba(32,43,33,0.06), 0 4px 14px rgba(32,43,33,0.06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#161C15; --surface:#1F2620; --surface-alt:#252D26;
+      --ink:#ECEFE6; --ink-soft:#AEB8A5; --ink-faint:#7C8574; --line:#333D31;
+      --accent:#E0954A; --accent-strong:#F0AC6A; --accent-ink:#241505;
+      --status-available-bg:#213829; --status-available-fg:#8FD3A0;
+      --status-loaned-bg:#3A2530; --status-loaned-fg:#E3A9C3;
+      --danger:#E3806B;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  *{box-sizing:border-box;}
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Public Sans", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background: var(--accent); color: var(--accent-ink); }
+  a{ color:inherit; } button{ font-family:inherit; } input, select{ font-family:inherit; }
+
+  .app{ max-width:1180px; margin:0 auto; padding:0 20px 64px; }
+
+  header.top{
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    padding:22px 0 14px; border-bottom:1px solid var(--line); margin-bottom:22px;
+  }
+  .top-row{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand svg{ width:34px; height:34px; flex-shrink:0; }
+  h1{
+    font-family:"Fraunces", Georgia, serif; font-optical-sizing:auto; font-weight:600;
+    font-size:clamp(24px, 3vw, 32px); margin:0; letter-spacing:-0.01em; text-wrap:balance;
+  }
+  .subtitle{ margin:2px 0 0; color:var(--ink-soft); font-size:14px; }
+  .whoami{ font-size:13px; color:var(--ink-soft); margin-top:4px; }
+  .whoami button{ background:none; border:none; color:var(--accent-strong); font-weight:600; cursor:pointer; padding:0; font-size:13px; }
+
+  .top-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+
+  .btn{
+    display:inline-flex; align-items:center; gap:7px; padding:9px 15px; border-radius:10px;
+    border:1px solid var(--line); background:var(--surface); color:var(--ink);
+    font-size:14px; font-weight:600; cursor:pointer;
+    transition:border-color .15s ease, transform .1s ease, background .15s ease;
+  }
+  .btn:hover{ border-color:var(--ink-faint); }
+  .btn:active{ transform:translateY(1px); }
+  .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .btn-primary:hover{ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn-ghost{ background:transparent; border-color:transparent; padding:9px 10px; }
+  .btn-ghost:hover{ background:var(--surface-alt); }
+  .btn-danger{ color:var(--danger); }
+  .btn-sm{ padding:6px 11px; font-size:13px; border-radius:8px; }
+  .btn-block{ width:100%; justify-content:center; }
+
+  .filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .filters select, .filters input[type="search"]{
+    padding:8px 12px; border-radius:9px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); font-size:13.5px; min-width:150px;
+  }
+  .filters input[type="search"]{ min-width:200px; }
+  .filters select:focus-visible, .filters input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .filter-count{ font-size:13px; color:var(--ink-faint); margin-left:2px; font-variant-numeric:tabular-nums; }
+
+  .banner{
+    display:flex; align-items:center; gap:10px; background:var(--status-loaned-bg); color:var(--status-loaned-fg);
+    border-radius:10px; padding:11px 15px; font-size:13.5px; margin-bottom:18px;
+  }
+
+  .empty{ text-align:center; padding:70px 20px; color:var(--ink-soft); }
+  .empty .glyph{ font-size:38px; margin-bottom:10px; opacity:.7; }
+  .empty h2{ font-family:"Fraunces", serif; font-weight:600; font-size:20px; margin:0 0 6px; color:var(--ink); }
+  .empty p{ margin:0 0 16px; font-size:14px; }
+
+  .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(268px, 1fr)); gap:16px; }
+
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:11px;
+  }
+  .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+  .card-title{ font-family:"Fraunces", serif; font-weight:600; font-size:17px; margin:0; text-wrap:balance; line-height:1.25; }
+  .pill{ flex-shrink:0; font-size:11.5px; font-weight:600; padding:4px 9px; border-radius:99px; white-space:nowrap; }
+  .pill-available{ background:var(--status-available-bg); color:var(--status-available-fg); }
+  .pill-loaned{ background:var(--status-loaned-bg); color:var(--status-loaned-fg); }
+
+  .tags{ display:flex; flex-wrap:wrap; gap:6px; }
+  .tag{
+    font-size:11.5px; letter-spacing:.02em; text-transform:uppercase; color:var(--ink-soft);
+    background:var(--surface-alt); border-radius:6px; padding:3px 7px; font-weight:600;
+  }
+  .tag-materia{ color:var(--accent-strong); }
+  .tag-code{ font-family:"IBM Plex Mono", monospace; text-transform:none; letter-spacing:0; }
+
+  .loan-info{ font-size:12.5px; color:var(--ink-soft); font-family:"IBM Plex Mono", monospace; font-variant-numeric:tabular-nums; }
+  .loan-info b{ color:var(--ink); font-weight:600; font-family:"Public Sans", sans-serif; }
+
+  .card-foot{ display:flex; gap:8px; margin-top:auto; padding-top:2px; }
+  .card-foot .btn{ flex:1; justify-content:center; }
+
+  .loan-form{ display:flex; flex-direction:column; gap:8px; background:var(--surface-alt); border-radius:10px; padding:10px; }
+  .loan-form .row{ display:flex; gap:8px; }
+  .loan-form .row .btn{ flex:1; justify-content:center; }
+
+  .card-manage{ display:flex; gap:6px; justify-content:flex-end; }
+  .icon-btn{
+    background:transparent; border:none; color:var(--ink-faint); cursor:pointer;
+    padding:4px; border-radius:6px; display:flex; align-items:center;
+  }
+  .icon-btn:hover{ color:var(--ink); background:var(--surface-alt); }
+  .icon-btn svg{ width:15px; height:15px; }
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,26,19,0.45);
+    display:flex; align-items:center; justify-content:center; padding:20px; z-index:100;
+  }
+  .modal{
+    background:var(--surface); border-radius:16px; padding:24px; width:100%; max-width:440px;
+    max-height:86vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.25);
+  }
+  .modal h2{ font-family:"Fraunces", serif; font-weight:600; font-size:20px; margin:0 0 4px; }
+  .modal .hint{ color:var(--ink-soft); font-size:13px; margin:0 0 18px; }
+  .field{ display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
+  .field label{ font-size:12.5px; font-weight:600; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.03em; }
+  .field input{ padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:14px; }
+  .field input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .field .help{ font-size:12px; color:var(--ink-faint); }
+  .modal-actions{ display:flex; gap:9px; margin-top:18px; }
+  .modal-actions .btn{ flex:1; justify-content:center; }
+
+  .teacher-list{ display:flex; flex-direction:column; gap:6px; margin:14px 0; max-height:260px; overflow-y:auto; }
+  .teacher-row{ display:flex; align-items:center; justify-content:space-between; padding:7px 10px; border-radius:8px; background:var(--surface-alt); font-size:13.5px; }
+  .add-teacher-row{ display:flex; gap:8px; }
+  .add-teacher-row input{ flex:1; }
+
+  /* Full-screen gates: PIN + who-are-you */
+  .gate{
+    position:fixed; inset:0; background:var(--bg); z-index:200;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .gate-card{ width:100%; max-width:380px; text-align:center; }
+  .gate-card .glyph{ font-size:40px; margin-bottom:14px; }
+  .gate-card h1{ font-size:24px; margin-bottom:6px; }
+  .gate-card p{ color:var(--ink-soft); font-size:14px; margin:0 0 22px; }
+  .gate-card input[type="password"], .gate-card input[type="text"]{
+    width:100%; padding:12px 14px; border-radius:10px; border:1px solid var(--line);
+    background:var(--surface); color:var(--ink); font-size:16px; text-align:center;
+    letter-spacing:.05em; margin-bottom:12px;
+  }
+  .gate-card input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
+  .gate-error{ color:var(--danger); font-size:13px; min-height:18px; margin-bottom:6px; }
+  .pick-list{ display:flex; flex-direction:column; gap:8px; max-height:50vh; overflow-y:auto; margin-bottom:6px; }
+  .pick-btn{
+    padding:12px 14px; border-radius:10px; border:1px solid var(--line); background:var(--surface);
+    color:var(--ink); font-size:15px; font-weight:600; cursor:pointer; text-align:left;
+  }
+  .pick-btn:hover{ border-color:var(--accent); }
+
+  /* Scanner */
+  .scan-modal .modal{ max-width:400px; }
+  #reader{ width:100%; border-radius:12px; overflow:hidden; margin-bottom:12px; background:var(--surface-alt); min-height:220px; }
+  .scan-fallback{ display:flex; gap:8px; margin-top:10px; }
+  .scan-fallback input{ flex:1; padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:14px; }
+  .scan-result-card{ background:var(--surface-alt); border-radius:10px; padding:14px; margin-top:12px; }
+  .scan-result-card h3{ font-family:"Fraunces", serif; margin:0 0 4px; font-size:17px; }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; } }
+</style>
+</head>
+<body>
+
+<div id="pin-gate-slot"></div>
+<div id="onboarding-slot"></div>
+
+<div class="app">
+  <header class="top">
+    <div class="top-row">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="2" y="2" width="20" height="20" rx="5" fill="var(--accent)"/>
+          <circle cx="7.5" cy="7.5" r="1.6" fill="var(--accent-ink)"/>
+          <circle cx="16.5" cy="7.5" r="1.6" fill="var(--accent-ink)"/>
+          <circle cx="12" cy="12" r="1.6" fill="var(--accent-ink)"/>
+          <circle cx="7.5" cy="16.5" r="1.6" fill="var(--accent-ink)"/>
+          <circle cx="16.5" cy="16.5" r="1.6" fill="var(--accent-ink)"/>
+        </svg>
+        <div>
+          <h1>Ludoteca del cole</h1>
+          <p class="subtitle">Préstamo de juegos de mesa entre docentes</p>
+          <p class="whoami" id="whoami-slot"></p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button class="btn btn-ghost" id="btn-teachers" type="button">Gestionar docentes</button>
+        <button class="btn" id="btn-scan" type="button">📷 Escanear código</button>
+        <button class="btn btn-primary" id="btn-add-game" type="button">+ Añadir juego</button>
+      </div>
+    </div>
+    <div class="filters">
+      <select id="f-curso" aria-label="Filtrar por curso"><option value="">Todos los cursos</option></select>
+      <select id="f-materia" aria-label="Filtrar por materia"><option value="">Todas las materias</option></select>
+      <select id="f-estado" aria-label="Filtrar por estado">
+        <option value="">Cualquier estado</option>
+        <option value="disponible">Disponible</option>
+        <option value="prestado">Prestado</option>
+      </select>
+      <input type="search" id="f-q" placeholder="Buscar juego…" aria-label="Buscar juego">
+      <span class="filter-count" id="filter-count"></span>
+    </div>
+  </header>
+
+  <div id="banner-slot"></div>
+  <div id="grid-slot"></div>
+</div>
+
+<div id="modal-slot"></div>
+<div id="scan-slot"></div>
+
+<script type="module">
+/* ============================================================
+   1) CONFIGURACIÓN — cambia estos dos valores
+   ============================================================ */
+
+// Pega aquí el firebaseConfig que te da la consola de Firebase
+// (Compilación > Firestore no hace falta tocarla, esto es de
+// "Añadir app web" en la página principal del proyecto).
+const firebaseConfig = {
+  apiKey: "AIzaSyDoqtpHsf3iPB5WvA9URhJautFCgqbHugM",
+  authDomain: "prestec-de-jocs-i-materials.firebaseapp.com",
+  projectId: "prestec-de-jocs-i-materials",
+  storageBucket: "prestec-de-jocs-i-materials.firebasestorage.app",
+  messagingSenderId: "139605253498",
+  appId: "1:139605253498:web:faa8e04025b0910afe0ac3"
+};
+
+// Clave que el profesorado escribe una vez para entrar. Cámbiala
+// por la que quieras (letras y números, sin espacios al inicio/final).
+const ACCESS_KEY = "ludoteca2026";
+
+/* ============================================================
+   2) A partir de aquí no hace falta tocar nada
+   ============================================================ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore.js";
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const gamesCol = collection(db, "games");
+const teachersRef = doc(db, "config", "teachers");
+
+const LS_PIN = "ludoteca_pin_ok";
+const LS_NAME = "ludoteca_docente";
+
+var games = [];
+var teachers = [];
+var filters = { curso:"", materia:"", estado:"", q:"" };
+var loaningId = null;
+var modalMode = null; // 'add' | 'edit' | 'teachers'
+var editingGame = null;
+var scanning = false;
+var scanFoundGame = null;
+var html5QrCode = null;
+var cameraRunning = false;
+
+var bannerSlot = document.getElementById("banner-slot");
+var gridSlot = document.getElementById("grid-slot");
+var modalSlot = document.getElementById("modal-slot");
+var scanSlot = document.getElementById("scan-slot");
+var whoamiSlot = document.getElementById("whoami-slot");
+
+function esc(s){
+  return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+  });
+}
+function fmtDate(iso){
+  if(!iso) return "";
+  try{
+    var d = new Date(iso);
+    return new Intl.DateTimeFormat("es-ES", {day:"2-digit", month:"2-digit", year:"numeric"}).format(d);
+  }catch(e){ return ""; }
+}
+function splitTags(raw){
+  return raw.split(",").map(function(s){ return s.trim(); }).filter(Boolean);
+}
+function uniqueSorted(list){
+  var seen = {}, out = [];
+  list.forEach(function(v){
+    var key = v.toLowerCase();
+    if(!seen[key]){ seen[key]=true; out.push(v); }
+  });
+  out.sort(function(a,b){ return a.localeCompare(b, "es"); });
+  return out;
+}
+function currentTeacher(){ return localStorage.getItem(LS_NAME) || ""; }
+
+/* ---------------- PIN gate ---------------- */
+function renderPinGate(){
+  var slot = document.getElementById("pin-gate-slot");
+  if(localStorage.getItem(LS_PIN) === "1"){ slot.innerHTML = ""; afterPinOk(); return; }
+  slot.innerHTML =
+    '<div class="gate"><div class="gate-card">' +
+      '<div class="glyph">🔒</div>' +
+      '<h1>Ludoteca del cole</h1>' +
+      '<p>Introduce la clave que os ha pasado el centro para entrar.</p>' +
+      '<input type="password" id="pin-input" placeholder="Clave de acceso" autocomplete="off">' +
+      '<div class="gate-error" id="pin-error"></div>' +
+      '<button class="btn btn-primary btn-block" id="pin-submit" type="button">Entrar</button>' +
+    '</div></div>';
+  var input = document.getElementById("pin-input");
+  input.focus();
+  function tryEnter(){
+    if(input.value === ACCESS_KEY){
+      localStorage.setItem(LS_PIN, "1");
+      slot.innerHTML = "";
+      afterPinOk();
+    } else {
+      document.getElementById("pin-error").textContent = "Clave incorrecta, inténtalo de nuevo.";
+    }
+  }
+  document.getElementById("pin-submit").addEventListener("click", tryEnter);
+  input.addEventListener("keydown", function(e){ if(e.key === "Enter") tryEnter(); });
+}
+
+function afterPinOk(){
+  startDataListeners();
+  renderOnboardingIfNeeded();
+}
+
+/* ---------------- Who are you ---------------- */
+function renderOnboardingIfNeeded(){
+  var slot = document.getElementById("onboarding-slot");
+  if(currentTeacher()){ slot.innerHTML = ""; renderWhoami(); return; }
+  slot.innerHTML =
+    '<div class="gate"><div class="gate-card">' +
+      '<div class="glyph">👋</div>' +
+      '<h1>¿Quién eres?</h1>' +
+      '<p>Se recordará en este dispositivo para prestar juegos más rápido.</p>' +
+      '<div class="pick-list" id="pick-list"></div>' +
+      '<div class="add-teacher-row" style="margin-top:10px;">' +
+        '<input type="text" id="onboard-new-name" placeholder="No estoy en la lista, me llamo…">' +
+        '<button class="btn btn-primary btn-sm" id="onboard-new-btn" type="button">Soy yo</button>' +
+      '</div>' +
+    '</div></div>';
+  renderPickList();
+  document.getElementById("onboard-new-btn").addEventListener("click", addSelfAsTeacher);
+  document.getElementById("onboard-new-name").addEventListener("keydown", function(e){ if(e.key === "Enter") addSelfAsTeacher(); });
+}
+function selectTeacher(name){
+  localStorage.setItem(LS_NAME, name);
+  document.getElementById("onboarding-slot").innerHTML = "";
+  renderWhoami();
+  render();
+}
+function addSelfAsTeacher(){
+  var input = document.getElementById("onboard-new-name");
+  var name = input.value.trim();
+  if(!name) return;
+  if(teachers.indexOf(name) === -1) setDoc(teachersRef, { names: teachers.concat([name]) });
+  selectTeacher(name);
+}
+function renderPickList(){
+  var list = document.getElementById("pick-list");
+  if(!list) return;
+  if(teachers.length === 0){
+    list.innerHTML = '<p class="hint">Todavía no hay nadie en la lista — sé el primero, escribe tu nombre abajo.</p>';
+    return;
+  }
+  list.innerHTML = teachers.map(function(t){
+    return '<button class="pick-btn" data-name="'+esc(t)+'" type="button">'+esc(t)+'</button>';
+  }).join("");
+  Array.prototype.forEach.call(list.querySelectorAll("[data-name]"), function(btn){
+    btn.addEventListener("click", function(){ selectTeacher(btn.getAttribute("data-name")); });
+  });
+}
+function renderWhoami(){
+  var name = currentTeacher();
+  whoamiSlot.innerHTML = name
+    ? 'Eres <b>'+esc(name)+'</b> · <button id="btn-change-who" type="button">cambiar</button>'
+    : "";
+  var chg = document.getElementById("btn-change-who");
+  if(chg) chg.addEventListener("click", function(){
+    localStorage.removeItem(LS_NAME);
+    renderOnboardingIfNeeded();
+  });
+}
+
+/* ---------------- Catalogue rendering ---------------- */
+function populateFilterOptions(){
+  var cursos = uniqueSorted(games.reduce(function(acc,g){ return acc.concat(g.cursos||[]); }, []));
+  var materias = uniqueSorted(games.reduce(function(acc,g){ return acc.concat(g.materias||[]); }, []));
+  var cursoSel = document.getElementById("f-curso");
+  var materiaSel = document.getElementById("f-materia");
+  var curCurso = filters.curso, curMateria = filters.materia;
+  cursoSel.innerHTML = '<option value="">Todos los cursos</option>' +
+    cursos.map(function(c){ return '<option value="'+esc(c)+'"'+(c===curCurso?" selected":"")+'>'+esc(c)+'</option>'; }).join("");
+  materiaSel.innerHTML = '<option value="">Todas las materias</option>' +
+    materias.map(function(m){ return '<option value="'+esc(m)+'"'+(m===curMateria?" selected":"")+'>'+esc(m)+'</option>'; }).join("");
+}
+function matchesFilters(g){
+  if(filters.curso && (g.cursos||[]).indexOf(filters.curso) === -1) return false;
+  if(filters.materia && (g.materias||[]).indexOf(filters.materia) === -1) return false;
+  if(filters.estado && g.estado !== filters.estado) return false;
+  if(filters.q){
+    var q = filters.q.toLowerCase();
+    if((g.nombre||"").toLowerCase().indexOf(q) === -1) return false;
+  }
+  return true;
+}
+function loanFormHtml(g, dataAttr){
+  var options = teachers.length
+    ? teachers.map(function(t){ return '<option value="'+esc(t)+'"'+(t===currentTeacher()?" selected":"")+'>'+esc(t)+'</option>'; }).join("")
+    : '<option value="">Sin docentes registrados</option>';
+  return (
+    '<div class="loan-form">' +
+      '<select data-role="loan-select">'+options+'</select>' +
+      '<div class="row">' +
+        '<button class="btn btn-primary btn-sm" data-action="confirm-loan" '+dataAttr+' type="button"'+(teachers.length?'':' disabled')+'>Confirmar</button>' +
+        '<button class="btn btn-sm" data-action="cancel-loan" type="button">Cancelar</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function cardHtml(g){
+  var isLoaned = g.estado === "prestado";
+  var cursos = (g.cursos||[]).map(function(c){ return '<span class="tag">'+esc(c)+'</span>'; }).join("");
+  var materias = (g.materias||[]).map(function(m){ return '<span class="tag tag-materia">'+esc(m)+'</span>'; }).join("");
+  var codeTag = g.codigo ? '<span class="tag tag-code">#'+esc(g.codigo)+'</span>' : '';
+  var statusPill = isLoaned
+    ? '<span class="pill pill-loaned">Prestado</span>'
+    : '<span class="pill pill-available">Disponible</span>';
+  var loanInfo = isLoaned
+    ? '<div class="loan-info">Con <b>'+esc(g.prestadoA||"—")+'</b> desde '+esc(fmtDate(g.fechaPrestamo))+'</div>'
+    : "";
+  var footer;
+  if(loaningId === g.id){
+    footer = loanFormHtml(g, 'data-id="'+esc(g.id)+'"');
+  } else if(isLoaned){
+    footer = '<div class="card-foot"><button class="btn btn-sm" data-action="return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button></div>';
+  } else {
+    footer = '<div class="card-foot"><button class="btn btn-primary btn-sm" data-action="start-loan" data-id="'+esc(g.id)+'" type="button">Prestar</button></div>';
+  }
+  return (
+    '<div class="card">' +
+      '<div class="card-head"><h3 class="card-title">'+esc(g.nombre)+'</h3>'+statusPill+'</div>' +
+      (cursos || materias || codeTag ? '<div class="tags">'+cursos+materias+codeTag+'</div>' : '') +
+      loanInfo + footer +
+      '<div class="card-manage">' +
+        '<button class="icon-btn" data-action="edit" data-id="'+esc(g.id)+'" title="Editar juego" type="button">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>' +
+        '</button>' +
+        '<button class="icon-btn" data-action="delete" data-id="'+esc(g.id)+'" title="Eliminar juego" type="button">' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>' +
+        '</button>' +
+      '</div>' +
+    '</div>'
+  );
+}
+function render(){
+  if(!currentTeacher()) return;
+  populateFilterOptions();
+  var filtered = games.filter(matchesFilters);
+  document.getElementById("filter-count").textContent = filtered.length + (filtered.length === 1 ? " juego" : " juegos");
+  if(games.length === 0){
+    gridSlot.innerHTML =
+      '<div class="empty"><div class="glyph">🎲</div><h2>Aún no hay juegos</h2>' +
+      '<p>Añade el primer juego de la ludoteca para empezar a gestionarlo.</p>' +
+      '<button class="btn btn-primary" id="empty-add" type="button">+ Añadir juego</button></div>';
+    var eb = document.getElementById("empty-add");
+    if(eb) eb.addEventListener("click", function(){ openGameModal("add"); });
+    return;
+  }
+  if(filtered.length === 0){
+    gridSlot.innerHTML = '<div class="empty"><div class="glyph">🔍</div><h2>Sin resultados</h2><p>Ningún juego coincide con estos filtros.</p></div>';
+    return;
+  }
+  gridSlot.innerHTML = '<div class="grid">' + filtered.map(cardHtml).join("") + '</div>';
+}
+
+/* ---------------- Game add/edit modal ---------------- */
+function renderModal(){
+  if(!modalMode){ modalSlot.innerHTML = ""; return; }
+  if(modalMode === "teachers"){
+    var rows = teachers.map(function(t, i){
+      return '<div class="teacher-row"><span>'+esc(t)+'</span>' +
+        '<button class="icon-btn" data-action="remove-teacher" data-index="'+i+'" title="Quitar" type="button">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg></button></div>';
+    }).join("") || '<p class="hint" style="margin:0;">Aún no hay docentes en la lista.</p>';
+    modalSlot.innerHTML =
+      '<div class="overlay" id="overlay"><div class="modal">' +
+        '<h2>Gestionar docentes</h2>' +
+        '<p class="hint">Esta lista aparece al prestar un juego y al identificarte.</p>' +
+        '<div class="teacher-list">'+rows+'</div>' +
+        '<div class="add-teacher-row">' +
+          '<input type="text" id="new-teacher" placeholder="Nombre del docente">' +
+          '<button class="btn btn-primary btn-sm" id="add-teacher-btn" type="button">Añadir</button>' +
+        '</div>' +
+        '<div class="modal-actions"><button class="btn" id="close-modal" type="button">Cerrar</button></div>' +
+      '</div></div>';
+  } else {
+    var isEdit = modalMode === "edit";
+    var g = editingGame || {nombre:"", cursos:[], materias:[], codigo:""};
+    modalSlot.innerHTML =
+      '<div class="overlay" id="overlay"><div class="modal">' +
+        '<h2>'+(isEdit ? "Editar juego" : "Añadir juego")+'</h2>' +
+        '<p class="hint">'+(isEdit ? "Actualiza los datos del juego." : "Se añadirá al catálogo compartido de la ludoteca.")+'</p>' +
+        '<div class="field"><label for="g-nombre">Nombre</label>' +
+          '<input type="text" id="g-nombre" value="'+esc(g.nombre)+'" placeholder="Ej. Catán"></div>' +
+        '<div class="field"><label for="g-codigo">Código de barras</label>' +
+          '<input type="text" id="g-codigo" value="'+esc(g.codigo||"")+'" placeholder="Ej. 8412345678903">' +
+          '<span class="help">El número que hay bajo el código de barras. Opcional.</span></div>' +
+        '<div class="field"><label for="g-cursos">Cursos</label>' +
+          '<input type="text" id="g-cursos" value="'+esc((g.cursos||[]).join(", "))+'" placeholder="Ej. 3º Primaria, 4º Primaria">' +
+          '<span class="help">Separa varios cursos con comas.</span></div>' +
+        '<div class="field"><label for="g-materias">Materias</label>' +
+          '<input type="text" id="g-materias" value="'+esc((g.materias||[]).join(", "))+'" placeholder="Ej. Matemáticas, Lógica">' +
+          '<span class="help">Separa varias materias con comas.</span></div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn" id="close-modal" type="button">Cancelar</button>' +
+          '<button class="btn btn-primary" id="save-game" type="button">'+(isEdit ? "Guardar cambios" : "Añadir juego")+'</button>' +
+        '</div>' +
+      '</div></div>';
+  }
+  document.getElementById("overlay").addEventListener("mousedown", function(e){ if(e.target.id === "overlay") closeModal(); });
+  var closeBtn = document.getElementById("close-modal");
+  if(closeBtn) closeBtn.addEventListener("click", closeModal);
+  if(modalMode === "teachers"){
+    document.getElementById("add-teacher-btn").addEventListener("click", addTeacherFromInput);
+    var input = document.getElementById("new-teacher");
+    input.addEventListener("keydown", function(e){ if(e.key === "Enter") addTeacherFromInput(); });
+    input.focus();
+  } else {
+    document.getElementById("save-game").addEventListener("click", saveGameFromModal);
+    document.getElementById("g-nombre").focus();
+  }
+}
+function closeModal(){ modalMode = null; editingGame = null; renderModal(); }
+function openGameModal(mode, game){ modalMode = mode; editingGame = game || null; renderModal(); }
+
+function saveGameFromModal(){
+  var nombre = document.getElementById("g-nombre").value.trim();
+  if(!nombre) return;
+  var codigo = document.getElementById("g-codigo").value.trim();
+  var cursos = splitTags(document.getElementById("g-cursos").value);
+  var materias = splitTags(document.getElementById("g-materias").value);
+  if(modalMode === "edit" && editingGame){
+    updateDoc(doc(db, "games", editingGame.id), { nombre:nombre, codigo:codigo, cursos:cursos, materias:materias });
+  } else {
+    addDoc(gamesCol, { nombre:nombre, codigo:codigo, cursos:cursos, materias:materias, estado:"disponible", prestadoA:null, fechaPrestamo:null });
+  }
+  closeModal();
+}
+function addTeacherFromInput(){
+  var input = document.getElementById("new-teacher");
+  var name = input.value.trim();
+  if(!name || teachers.indexOf(name) !== -1){ input.value = ""; return; }
+  setDoc(teachersRef, { names: teachers.concat([name]) });
+  input.value = "";
+}
+function removeTeacher(index){
+  var next = teachers.slice();
+  next.splice(index, 1);
+  setDoc(teachersRef, { names: next });
+}
+function markLoan(gameId, name){
+  updateDoc(doc(db, "games", gameId), { estado:"prestado", prestadoA:name, fechaPrestamo:new Date().toISOString() });
+}
+function markReturn(gameId){
+  updateDoc(doc(db, "games", gameId), { estado:"disponible", prestadoA:null, fechaPrestamo:null });
+}
+
+/* ---------------- Scanner ---------------- */
+function openScan(){
+  scanFoundGame = null;
+  scanning = true;
+  renderScan();
+  startCamera();
+}
+function closeScan(){
+  scanning = false;
+  scanFoundGame = null;
+  stopCamera();
+  scanSlot.innerHTML = "";
+}
+function startCamera(){
+  if(typeof Html5Qrcode === "undefined"){ showScanFallbackOnly(); return; }
+  html5QrCode = new Html5Qrcode("reader");
+  cameraRunning = false;
+  html5QrCode.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 220 },
+    function(decodedText){ handleScanResult(decodedText); },
+    function(){ /* ignore per-frame no-match */ }
+  ).then(function(){ cameraRunning = true; })
+   .catch(function(){ cameraRunning = false; showScanFallbackOnly(); });
+}
+function stopCamera(){
+  if(html5QrCode && cameraRunning){
+    cameraRunning = false;
+    html5QrCode.stop().catch(function(){}).then(function(){
+      if(html5QrCode){ try{ html5QrCode.clear(); }catch(e){} }
+      html5QrCode = null;
+    });
+  } else {
+    html5QrCode = null;
+  }
+}
+function showScanFallbackOnly(){
+  var reader = document.getElementById("reader");
+  if(reader) reader.innerHTML = '<div class="hint" style="padding:16px;">No se pudo acceder a la cámara en este dispositivo. Escribe el código a mano abajo.</div>';
+}
+function handleScanResult(code){
+  stopCamera();
+  var found = games.find(function(g){ return g.codigo && g.codigo === code; });
+  scanFoundGame = found || null;
+  renderScan(code, !found);
+}
+function renderScan(lastCode, notFound){
+  if(!scanning){ scanSlot.innerHTML = ""; return; }
+  var resultHtml = "";
+  if(scanFoundGame){
+    var g = scanFoundGame;
+    var isLoaned = g.estado === "prestado";
+    resultHtml =
+      '<div class="scan-result-card">' +
+        '<h3>'+esc(g.nombre)+'</h3>' +
+        (isLoaned
+          ? '<p class="hint">Prestado a '+esc(g.prestadoA||"—")+' desde '+esc(fmtDate(g.fechaPrestamo))+'</p>' +
+            '<button class="btn btn-primary btn-block" data-action="scan-return" data-id="'+esc(g.id)+'" type="button">Marcar como devuelto</button>'
+          : '<button class="btn btn-primary btn-block" data-action="scan-loan" data-id="'+esc(g.id)+'" type="button">Prestarme "'+esc(g.nombre)+'"</button>'
+        ) +
+      '</div>';
+  } else if(notFound){
+    resultHtml = '<div class="scan-result-card"><p class="hint">No hay ningún juego con el código <b>'+esc(lastCode)+'</b>. Puedes añadirlo desde "+ Añadir juego".</p></div>';
+  }
+  scanSlot.innerHTML =
+    '<div class="overlay scan-modal" id="scan-overlay"><div class="modal">' +
+      '<h2>Escanear código</h2>' +
+      '<p class="hint">Apunta con la cámara al código de barras del juego.</p>' +
+      '<div id="reader"></div>' +
+      resultHtml +
+      '<div class="scan-fallback">' +
+        '<input type="text" id="scan-manual" placeholder="O escribe el código a mano">' +
+        '<button class="btn btn-sm" id="scan-manual-btn" type="button">Buscar</button>' +
+      '</div>' +
+      '<div class="modal-actions"><button class="btn" id="scan-close" type="button">Cerrar</button></div>' +
+    '</div></div>';
+  document.getElementById("scan-close").addEventListener("click", closeScan);
+  document.getElementById("scan-manual-btn").addEventListener("click", function(){
+    var v = document.getElementById("scan-manual").value.trim();
+    if(v) handleScanResult(v);
+  });
+}
+
+/* ---------------- Events ---------------- */
+gridSlot.addEventListener("click", function(e){
+  var btn = e.target.closest("[data-action]");
+  if(!btn) return;
+  var action = btn.getAttribute("data-action");
+  var id = btn.getAttribute("data-id");
+  if(action === "start-loan"){ loaningId = id; render(); }
+  else if(action === "cancel-loan"){ loaningId = null; render(); }
+  else if(action === "confirm-loan"){
+    var card = btn.closest(".card");
+    var sel = card.querySelector('[data-role="loan-select"]');
+    var name = sel && sel.value;
+    if(!name) return;
+    markLoan(id, name);
+    loaningId = null;
+  }
+  else if(action === "return"){ markReturn(id); }
+  else if(action === "edit"){
+    var game = games.find(function(g){ return g.id === id; });
+    if(game) openGameModal("edit", game);
+  }
+  else if(action === "delete"){
+    var game2 = games.find(function(g){ return g.id === id; });
+    if(game2 && confirm('¿Eliminar "'+game2.nombre+'" de la ludoteca?')) deleteDoc(doc(db, "games", id));
+  }
+});
+modalSlot.addEventListener("click", function(e){
+  var btn = e.target.closest("[data-action]");
+  if(!btn) return;
+  if(btn.getAttribute("data-action") === "remove-teacher") removeTeacher(parseInt(btn.getAttribute("data-index"), 10));
+});
+scanSlot.addEventListener("click", function(e){
+  var btn = e.target.closest("[data-action]");
+  if(!btn) return;
+  var action = btn.getAttribute("data-action");
+  var id = btn.getAttribute("data-id");
+  if(action === "scan-loan"){ markLoan(id, currentTeacher()); closeScan(); }
+  else if(action === "scan-return"){ markReturn(id); closeScan(); }
+});
+
+document.getElementById("btn-add-game").addEventListener("click", function(){ openGameModal("add"); });
+document.getElementById("btn-teachers").addEventListener("click", function(){ modalMode = "teachers"; renderModal(); });
+document.getElementById("btn-scan").addEventListener("click", openScan);
+document.getElementById("f-curso").addEventListener("change", function(e){ filters.curso = e.target.value; render(); });
+document.getElementById("f-materia").addEventListener("change", function(e){ filters.materia = e.target.value; render(); });
+document.getElementById("f-estado").addEventListener("change", function(e){ filters.estado = e.target.value; render(); });
+document.getElementById("f-q").addEventListener("input", function(e){ filters.q = e.target.value; render(); });
+
+/* ---------------- Data listeners ---------------- */
+function startDataListeners(){
+  onSnapshot(gamesCol, function(snap){
+    games = snap.docs.map(function(d){ return Object.assign({id:d.id}, d.data()); });
+    render();
+  }, function(){
+    bannerSlot.innerHTML = '<div class="banner">No se pudo conectar con la base de datos. Revisa la configuración de Firebase en el archivo.</div>';
+  });
+  onSnapshot(teachersRef, function(snap){
+    var data = snap.exists() ? snap.data() : null;
+    teachers = (data && Array.isArray(data.names)) ? data.names : [];
+    render();
+    if(!currentTeacher()) renderPickList();
+    if(modalMode === "teachers") renderModal();
+  }, function(){});
+}
+
+renderPinGate();
+</script>
+</body>
+</html>
