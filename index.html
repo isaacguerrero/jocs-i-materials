@@ -107,6 +107,11 @@
   .card{
     background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
     padding:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:11px;
+    overflow:hidden;
+  }
+  .card-cover{
+    display:block; width:calc(100% + 32px); margin:-16px -16px 0; height:128px;
+    object-fit:cover; background:var(--surface-alt);
   }
   .card-head{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
   .card-title{ font-family:"Fraunces", serif; font-weight:600; font-size:17px; margin:0; text-wrap:balance; line-height:1.25; }
@@ -155,6 +160,15 @@
   .field input{ padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink); font-size:14px; }
   .field input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; }
   .field .help{ font-size:12px; color:var(--ink-faint); }
+  .image-field{ display:flex; align-items:center; gap:12px; }
+  .image-preview{
+    width:64px; height:64px; flex-shrink:0; border-radius:10px; overflow:hidden;
+    background:var(--surface-alt); display:flex; align-items:center; justify-content:center;
+    font-size:22px; border:1px solid var(--line);
+  }
+  .image-preview img{ width:100%; height:100%; object-fit:cover; }
+  .image-actions{ display:flex; flex-direction:column; gap:6px; align-items:flex-start; }
+  .image-actions input[type="file"]{ font-size:12.5px; max-width:200px; color:var(--ink-soft); }
   .modal-actions{ display:flex; gap:9px; margin-top:18px; }
   .modal-actions .btn{ flex:1; justify-content:center; }
 
@@ -290,6 +304,7 @@ var filters = { curso:"", materia:"", estado:"", q:"" };
 var loaningId = null;
 var modalMode = null; // 'add' | 'edit' | 'teachers'
 var editingGame = null;
+var modalImageData; // undefined = no change, null = remove, string = new data URL
 var scanning = false;
 var scanFoundGame = null;
 var html5QrCode = null;
@@ -476,8 +491,10 @@ function cardHtml(g){
   } else {
     footer = '<div class="card-foot"><button class="btn btn-primary btn-sm" data-action="start-loan" data-id="'+esc(g.id)+'" type="button">Prestar</button></div>';
   }
+  var cover = g.imagen ? '<img class="card-cover" src="'+esc(g.imagen)+'" alt="">' : '';
   return (
     '<div class="card">' +
+      cover +
       '<div class="card-head"><h3 class="card-title">'+esc(g.nombre)+'</h3>'+statusPill+'</div>' +
       (cursos || materias || codeTag ? '<div class="tags">'+cursos+materias+codeTag+'</div>' : '') +
       loanInfo + footer +
@@ -542,6 +559,15 @@ function renderModal(){
         '<p class="hint">'+(isEdit ? "Actualiza los datos del juego." : "Se añadirá al catálogo compartido de la ludoteca.")+'</p>' +
         '<div class="field"><label for="g-nombre">Nombre</label>' +
           '<input type="text" id="g-nombre" value="'+esc(g.nombre)+'" placeholder="Ej. Catán"></div>' +
+        '<div class="field"><label>Carátula</label>' +
+          '<div class="image-field">' +
+            '<div class="image-preview" id="g-imagen-preview">'+(g.imagen ? '<img src="'+esc(g.imagen)+'" alt="">' : '🎲')+'</div>' +
+            '<div class="image-actions">' +
+              '<input type="file" id="g-imagen-file" accept="image/*">' +
+              '<button type="button" class="btn btn-sm" id="g-imagen-remove"'+(g.imagen ? '' : ' style="display:none;"')+'>Quitar imagen</button>' +
+            '</div>' +
+          '</div>' +
+          '<span class="help">Opcional. Se reduce de tamaño automáticamente al subirla.</span></div>' +
         '<div class="field"><label for="g-codigo">Código de barras</label>' +
           '<input type="text" id="g-codigo" value="'+esc(g.codigo||"")+'" placeholder="Ej. 8412345678903">' +
           '<span class="help">El número que hay bajo el código de barras. Opcional.</span></div>' +
@@ -568,10 +594,51 @@ function renderModal(){
   } else {
     document.getElementById("save-game").addEventListener("click", saveGameFromModal);
     document.getElementById("g-nombre").focus();
+    document.getElementById("g-imagen-file").addEventListener("change", handleImageFileChange);
+    document.getElementById("g-imagen-remove").addEventListener("click", function(){
+      modalImageData = null;
+      document.getElementById("g-imagen-preview").innerHTML = "🎲";
+      document.getElementById("g-imagen-remove").style.display = "none";
+    });
   }
 }
-function closeModal(){ modalMode = null; editingGame = null; renderModal(); }
-function openGameModal(mode, game){ modalMode = mode; editingGame = game || null; renderModal(); }
+function closeModal(){ modalMode = null; editingGame = null; modalImageData = undefined; renderModal(); }
+function openGameModal(mode, game){ modalMode = mode; editingGame = game || null; modalImageData = undefined; renderModal(); }
+
+function resizeImageFile(file, maxWidth, quality){
+  return new Promise(function(resolve, reject){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, maxWidth / img.width);
+        var w = Math.max(1, Math.round(img.width * scale));
+        var h = Math.max(1, Math.round(img.height * scale));
+        var canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = function(){ reject(new Error("No se pudo leer la imagen")); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ reject(new Error("No se pudo leer el archivo")); };
+    reader.readAsDataURL(file);
+  });
+}
+function handleImageFileChange(e){
+  var file = e.target.files && e.target.files[0];
+  if(!file) return;
+  var preview = document.getElementById("g-imagen-preview");
+  preview.innerHTML = "…";
+  resizeImageFile(file, 400, 0.7).then(function(dataUrl){
+    modalImageData = dataUrl;
+    preview.innerHTML = '<img src="'+dataUrl+'" alt="">';
+    document.getElementById("g-imagen-remove").style.display = "";
+  }).catch(function(){
+    preview.innerHTML = "🎲";
+  });
+}
 
 function saveGameFromModal(){
   var nombre = document.getElementById("g-nombre").value.trim();
@@ -579,10 +646,14 @@ function saveGameFromModal(){
   var codigo = document.getElementById("g-codigo").value.trim();
   var cursos = splitTags(document.getElementById("g-cursos").value);
   var materias = splitTags(document.getElementById("g-materias").value);
+  var payload = { nombre:nombre, codigo:codigo, cursos:cursos, materias:materias };
+  if(modalImageData !== undefined) payload.imagen = modalImageData;
   if(modalMode === "edit" && editingGame){
-    updateDoc(doc(db, "games", editingGame.id), { nombre:nombre, codigo:codigo, cursos:cursos, materias:materias });
+    updateDoc(doc(db, "games", editingGame.id), payload);
   } else {
-    addDoc(gamesCol, { nombre:nombre, codigo:codigo, cursos:cursos, materias:materias, estado:"disponible", prestadoA:null, fechaPrestamo:null });
+    if(modalImageData === undefined) payload.imagen = null;
+    payload.estado = "disponible"; payload.prestadoA = null; payload.fechaPrestamo = null;
+    addDoc(gamesCol, payload);
   }
   closeModal();
 }
